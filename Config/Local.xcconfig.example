@@ -1,0 +1,7 @@
+// Скопировать в Config/Local.xcconfig (файл в .gitignore) и заполнить.
+
+// Apple Team ID (10 символов). Xcode → Settings → Accounts → Team → Membership.
+GDS_DEVELOPMENT_TEAM = XXXXXXXXXX
+
+// Client ID OAuth App с включённым Device Flow (см. docs/05-AUTH.md §2).
+GITHUB_OAUTH_CLIENT_ID = Ov23liXXXXXXXXXXXXXX

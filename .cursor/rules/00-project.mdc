@@ -1,0 +1,55 @@
+---
+description: Обзор проекта GitDocumentStorage, структура, жёсткие ограничения. Читать всегда.
+alwaysApply: true
+---
+
+# GitDocumentStorage — что это
+
+Нативное macOS-приложение (Swift 6, SwiftUI + AppKit, macOS 15+), которое показывает удалённый GitHub-репозиторий
+как обычную папку в Finder (через **File Provider** / `NSFileProviderReplicatedExtension`).
+Для пользователя это «сетевая папка»: нет понятий commit/branch/push. Сохранил файл → через секунды он на GitHub
+и у всех остальных пользователей этой папки. Папок (репозиториев) может быть несколько, аккаунтов GitHub — несколько.
+Пока приложение запущено — папки доступны; не запущено — недоступны.
+
+Транспорт к GitHub — **только HTTPS API GitHub** (REST Git Data API + GraphQL `createCommitOnBranch`).
+Локального клона `.git` НЕТ, libgit2/бинарник git НЕ используются. См. `docs/06-DECISIONS.md` (ADR-002).
+
+# Где что лежит
+
+- `docs/00-PLAN.md` — пошаговый план реализации по фазам. **Источник истины по порядку работ.**
+- `docs/01-ARCHITECTURE.md` — процессы, модули, потоки данных, последовательности.
+- `docs/02-DATA-MODEL.md` — схема SQLite (GRDB), идентификаторы, версии, sync anchor.
+- `docs/03-SYNC-AND-CONFLICTS.md` — алгоритмы синка, debounce, матрица конфликтов, ignore-list.
+- `docs/04-GITHUB-API.md` — точные эндпоинты, лимиты, проверка возможностей репозитория («пинг»).
+- `docs/05-AUTH.md` — Device Flow, Keychain, мультиаккаунт.
+- `docs/06-DECISIONS.md` — ADR (почему именно так). Не менять решения молча — добавлять новый ADR.
+- `docs/07-TESTING.md` — стратегия тестов и ручные сценарии приёмки.
+- `docs/08-OPEN-QUESTIONS.md` — открытые вопросы и принятые по умолчанию допущения.
+- `project.yml` — XcodeGen. Проект `.xcodeproj` генерируется, в git не хранится.
+- `Packages/GitDocsKit/` — общий SPM-пакет: `GitHubKit`, `SyncCore`, `Persistence`.
+- `Sources/App/` — контейнерное приложение (menu bar + Settings).
+- `Sources/FileProviderExtension/` — расширение File Provider (вся файловая семантика + загрузка/выгрузка).
+- `Config/` — entitlements, xcconfig. `Config/Local.xcconfig` (gitignored) содержит `DEVELOPMENT_TEAM`.
+- `scripts/` — bootstrap, логи fileproviderd, сброс доменов.
+
+# Жёсткие правила
+
+1. **Не ломать сборку.** После любого изменения: `make build` (xcodegen + xcodebuild) и `make test` должны проходить.
+2. Любая работа ведётся по фазам из `docs/00-PLAN.md`. Не начинать фазу N+1, пока не выполнены критерии приёмки фазы N.
+3. Расширение File Provider — песочница, отдельный процесс. Общие данные только через App Group контейнер и Keychain access group.
+4. Никаких блокирующих вызовов сети/диска на главном потоке приложения. В расширении — все обработчики асинхронные, completion вызывать ровно один раз.
+5. Токены — только в Keychain. В логах — только `privacy: .private` для путей файлов и имён пользователей.
+6. Все обращения к GitHub — через `GitHubClient` с лимитером запросов и ETag-кэшем. Прямые `URLSession` вызовы вне `GitHubKit` запрещены.
+7. Файлы `.DS_Store`, `._*`, lock-файлы Office и прочее из ignore-list (см. `docs/03`) никогда не уходят в репозиторий.
+8. Коммиты в GitHub делаются только fast-forward (`expectedHeadOid` / non-force `updateRef`). Force-push запрещён.
+9. Идентификаторы элементов File Provider — стабильные UUID из БД, не пути.
+10. Перед изменением публичных протоколов в `SyncCore` — обновить `docs/01-ARCHITECTURE.md`.
+
+# Как собирать и отлаживать
+
+- `make generate` — `xcodegen generate`.
+- `make build` — сборка Debug без подписи для проверки компиляции; `make run` — сборка с подписью и запуск.
+- `make test` — `swift test` в `Packages/GitDocsKit` + `xcodebuild test`.
+- `scripts/fp-logs.sh` — поток логов `fileproviderd` и расширения.
+- `scripts/fp-reset.sh` — удалить все домены провайдера (когда Finder «завис» на старом состоянии).
+- Папки доменов живут в `~/Library/CloudStorage/GitDocumentStorage-<DomainName>/`.

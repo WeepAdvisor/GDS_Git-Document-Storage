@@ -1,0 +1,22 @@
+---
+description: Правила и грабли File Provider (NSFileProviderReplicatedExtension) на macOS
+globs: Sources/FileProviderExtension/**,Packages/GitDocsKit/Sources/SyncCore/**
+---
+
+# File Provider — обязательные правила
+
+- Класс расширения: `NSObject, NSFileProviderReplicatedExtension` (+ `NSFileProviderEnumerating`). Дополнительно: `NSFileProviderDomainState`, `NSFileProviderPending`.
+- `Info.plist` расширения: `NSExtensionPointIdentifier = com.apple.fileprovider-nonui`, `NSExtensionFileProviderSupportsEnumeration = YES`. Principal class — `$(PRODUCT_MODULE_NAME).FileProviderExtension`.
+- Один экземпляр расширения создаётся **на домен** (`init(domain:)`). Домен = один репозиторий. Не держать глобальное состояние между доменами.
+- `itemIdentifier` — стабильный UUID из таблицы `items` (не путь!). Корень — `.rootContainer`. При переименовании/перемещении UUID сохраняется.
+- `NSFileProviderItemVersion`: `contentVersion = Data(blobSHA.utf8)`, `metadataVersion = Data("\(metaRevision)".utf8)`. Меняется contentVersion → система перекачает содержимое материализованного файла.
+- `enumerator(for: .workingSet)` обязателен: через него Finder узнаёт об удалённых изменениях. После применения удалённого диффа вызывать `NSFileProviderManager(for: domain).signalEnumerator(for: .workingSet)`.
+- Sync anchor — `Data` из монотонного `revision` в таблице `change_log`. Если anchor старее хранимого хвоста лога — вернуть `NSFileProviderError(.syncAnchorExpired)`; система сделает полную переэнумерацию.
+- `createItem`/`modifyItem`/`deleteItem`: отвечать быстро. Сначала записать изменение локально (БД + staging-копия содержимого), вернуть item с `isUploading = true`, затем фоновая выгрузка; по завершении — обновить версию и `signalEnumerator(.workingSet)`.
+- В `modifyItem` сравнивать `baseVersion.contentVersion` с текущим blobSHA в БД: не совпало → конфликт → политика из `docs/03`.
+- Пути содержимого, которые передаёт система (`contents: URL`), валидны только внутри вызова — **сразу копировать/перемещать** в staging-каталог в App Group.
+- Ошибки сети/недоступности движка → `NSFileProviderError(.serverUnreachable)`; нет прав на запись → `NSFileProviderError(.notAuthenticated)` или `.insufficientQuota` не использовать; для read-only домена возвращать item без `capabilities` на запись (`.allowsReading`, `.allowsContentEnumerating`).
+- Если главное приложение не запущено (проверка `AppLiveness`) — любые операции кроме отдачи уже материализованных данных возвращают `.serverUnreachable`.
+- Не блокировать поток в обработчиках. Расширение может быть убито системой в любой момент: все pending-операции должны переживать рестарт (очередь в БД, идемпотентность).
+- Отладка: `scripts/fp-logs.sh`; «подвисший» домен — `scripts/fp-reset.sh`; `pluginkit -m -p com.apple.fileprovider-nonui` показывает, видит ли система расширение.
+- Расширение запускается системой из бандла приложения. После каждой сборки приложение должно быть запущено хотя бы раз, чтобы LaunchServices зарегистрировал новый бандл.

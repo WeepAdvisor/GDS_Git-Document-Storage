@@ -1,0 +1,16 @@
+---
+description: Правила работы с GitHub API (лимиты, ETag, коммиты)
+globs: Packages/GitDocsKit/Sources/GitHubKit/**
+---
+
+# GitHub API — правила
+
+- Все запросы через `GitHubClient` (actor). Заголовки: `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2022-11-28`, `Authorization: Bearer <token>`, `User-Agent: GitDocumentStorage/<version>`.
+- `RateLimiter` обязателен: учитывать `x-ratelimit-remaining/reset`, `retry-after`, 403/429 secondary limits (экспоненциальный backoff, минимум 60 с). Не более 4 параллельных мутаций на репозиторий.
+- Поллинг ветки — только условными запросами (`If-None-Match` с ETag). 304 не тратит primary rate limit.
+- Коммиты только fast-forward: GraphQL `createCommitOnBranch` с `expectedHeadOid`, либо REST `PATCH git/refs/heads/{b}` с `force=false`. При 409/422 (not fast-forward) — rebase на новый HEAD и повтор (см. `docs/03`).
+- Выбор стратегии коммита — `CommitStrategySelector` (см. `docs/04`): GraphQL для пачек новых небольших файлов; REST Git Data для переименований/копий (переиспользование blob SHA), удалений и файлов > лимита GraphQL.
+- Blob > 100 MB — отказ на нашей стороне с понятной ошибкой (GitHub всё равно не примет).
+- Pаспознавать пустой репозиторий (409 `Git Repository is empty`) → первый файл через Contents API `PUT /repos/{o}/{r}/contents/{path}`.
+- Всё, что возвращает API, маппить в наши структуры (`RemoteTreeEntry`, `RemoteCommit`, `RemoteDiff`); модели API не выпускать за пределы `GitHubKit`.
+- Тесты — только с `MockURLProtocol` и записанными JSON-фикстурами в `Tests/GitHubKitTests/Fixtures`.

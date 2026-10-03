@@ -1,0 +1,15 @@
+// Общие настройки. Персональные (Team ID, OAuth Client ID) — в Local.xcconfig (gitignored).
+#include? "Local.xcconfig"
+
+// Базовый bundle id. Меняется в одном месте (см. docs/08 Q1).
+GDS_BUNDLE_ID = com.nasonov.gitdocumentstorage
+
+// App Group и Keychain group. На macOS группа должна быть с префиксом Team ID.
+GDS_APP_GROUP_ID = $(TeamIdentifierPrefix)group.$(GDS_BUNDLE_ID)
+GDS_KEYCHAIN_GROUP = $(AppIdentifierPrefix)$(GDS_BUNDLE_ID).shared
+
+// Значения по умолчанию, если Local.xcconfig отсутствует (сборка без подписи всё равно пройдёт).
+GDS_DEVELOPMENT_TEAM =
+GITHUB_OAUTH_CLIENT_ID = REPLACE_ME
+
+PRODUCT_MODULE_NAME = $(TARGET_NAME:c99extidentifier)

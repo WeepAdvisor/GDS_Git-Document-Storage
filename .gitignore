@@ -1,0 +1,27 @@
+# Xcode / XcodeGen
+*.xcodeproj
+*.xcworkspace
+!*.xcworkspace/contents.xcworkspacedata
+xcuserdata/
+build/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# SPM
+.build/
+.swiftpm/
+Packages/*/.build/
+
+# Личные настройки
+Config/Local.xcconfig
+
+# macOS
+.DS_Store
+._*
+
+# Логи/временное
+*.log
+/tmp/

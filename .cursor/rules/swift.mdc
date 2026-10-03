@@ -1,0 +1,19 @@
+---
+description: Стиль и конвенции Swift-кода в проекте
+globs: **/*.swift
+---
+
+# Swift-конвенции
+
+- Swift 6, strict concurrency (`SWIFT_STRICT_CONCURRENCY = complete`). Все типы, пересекающие границы акторов, — `Sendable`.
+- Асинхронность — `async/await` и акторы. Completion-handler API File Provider оборачивать в `Task { ... }` и вызывать completion ровно один раз (в `defer`/явно во всех ветках).
+- Ошибки — типизированные `enum ... : Error` на уровне модуля (`GitHubError`, `SyncError`, `StoreError`). В расширении перед возвратом в систему маппить в `NSFileProviderError` через `SyncError.asFileProviderError()`.
+- Никаких `try!`, `as!`, `!` на опционалах вне тестов. `fatalError` только для нарушений инвариантов, которые невозможны по построению.
+- Логи — `os.Logger` с категориями: `app`, `ext`, `sync`, `github`, `store`. Пути и имена пользователей — `\(path, privacy: .private)`.
+- Зависимости: только `GRDB.swift` (SQLite). Новые зависимости — только через ADR в `docs/06-DECISIONS.md`.
+- Модели данных — `struct`, протоколы для границ модулей (`RemoteRepository`, `ItemStore`, `TokenStore`) — чтобы мокать в тестах.
+- Один тип — один файл. Имя файла = имя типа. Расширения — `Type+Feature.swift`.
+- Тесты: `XCTest` (или Swift Testing) в `Packages/GitDocsKit/Tests`. Сетевые тесты — через `MockURLProtocol`, без реальной сети.
+- SwiftUI для окон настроек, AppKit (`NSStatusItem`) для меню-бара. Без сторонних UI-библиотек.
+- Строки UI — на английском, вынесены в `Localizable.xcstrings` (русская локализация — позже).
+- Не использовать `DispatchQueue.main.sync`, `Thread.sleep`, `semaphore.wait()` для ожидания async-кода.

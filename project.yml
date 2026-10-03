@@ -1,0 +1,114 @@
+name: GitDocumentStorage
+options:
+  bundleIdPrefix: com.nasonov
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  groupSortPosition: top
+
+configs:
+  Debug: debug
+  Release: release
+
+configFiles:
+  Debug: Config/Shared.xcconfig
+  Release: Config/Shared.xcconfig
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: $(GDS_DEVELOPMENT_TEAM)
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+
+packages:
+  GitDocsKit:
+    path: Packages/GitDocsKit
+
+targets:
+  GitDocumentStorage:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/App
+    dependencies:
+      - target: GitDocumentStorageFileProvider
+        embed: true
+      - package: GitDocsKit
+        product: SyncCore
+      - sdk: FileProvider.framework
+      - sdk: ServiceManagement.framework
+    info:
+      path: Sources/App/Info.plist
+      properties:
+        CFBundleDisplayName: GitDocumentStorage
+        CFBundleName: GitDocumentStorage
+        LSUIElement: true
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSHumanReadableCopyright: "© 2026"
+        GDSAppGroupID: $(GDS_APP_GROUP_ID)
+        GDSKeychainAccessGroup: $(GDS_KEYCHAIN_GROUP)
+        GDSFileProviderBundleID: $(GDS_BUNDLE_ID).fileprovider
+        GDSGitHubOAuthClientID: $(GITHUB_OAUTH_CLIENT_ID)
+    entitlements:
+      path: Config/App.entitlements
+    settings:
+      base:
+        PRODUCT_NAME: GitDocumentStorage
+        PRODUCT_BUNDLE_IDENTIFIER: $(GDS_BUNDLE_ID)
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_ENTITLEMENTS: Config/App.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+  GitDocumentStorageFileProvider:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Sources/FileProviderExtension
+    dependencies:
+      - package: GitDocsKit
+        product: SyncCore
+      - sdk: FileProvider.framework
+    info:
+      path: Sources/FileProviderExtension/Info.plist
+      properties:
+        CFBundleDisplayName: GitDocumentStorage
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        GDSAppGroupID: $(GDS_APP_GROUP_ID)
+        GDSKeychainAccessGroup: $(GDS_KEYCHAIN_GROUP)
+        GDSMainAppBundleID: $(GDS_BUNDLE_ID)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.fileprovider-nonui
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).FileProviderExtension
+          NSExtensionFileProviderSupportsEnumeration: true
+    entitlements:
+      path: Config/FileProvider.entitlements
+    settings:
+      base:
+        PRODUCT_NAME: GitDocumentStorageFileProvider
+        PRODUCT_BUNDLE_IDENTIFIER: $(GDS_BUNDLE_ID).fileprovider
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_ENTITLEMENTS: Config/FileProvider.entitlements
+        SKIP_INSTALL: YES
+
+schemes:
+  GitDocumentStorage:
+    build:
+      targets:
+        GitDocumentStorage: all
+        GitDocumentStorageFileProvider: all
+    run:
+      config: Debug
+      executable: GitDocumentStorage
+    test:
+      config: Debug
+      targets: []
+    profile:
+      config: Release
+    archive:
+      config: Release
