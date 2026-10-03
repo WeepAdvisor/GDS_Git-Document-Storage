@@ -49,7 +49,7 @@ alwaysApply: true
 
 - `make generate` — `xcodegen generate`.
 - `make build` — сборка Debug без подписи для проверки компиляции; `make run` — сборка с подписью и запуск.
-- `make test` — `swift test` в `Packages/GitDocsKit` + `xcodebuild test`.
+- `make test` — `swift test` в `Packages/GitDocsKit` (весь тестируемый код живёт в пакете).
 - `scripts/fp-logs.sh` — поток логов `fileproviderd` и расширения.
 - `scripts/fp-reset.sh` — удалить все домены провайдера (когда Finder «завис» на старом состоянии).
 - Папки доменов живут в `~/Library/CloudStorage/GitDocumentStorage-<DomainName>/`.

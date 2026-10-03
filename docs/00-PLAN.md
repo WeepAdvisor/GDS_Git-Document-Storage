@@ -12,14 +12,16 @@
 
 Цель: приложение + расширение File Provider собираются, подписываются, в Finder появляется папка с одним фиктивным файлом.
 
+Состояние на старте: каркас уже написан и компилируется без подписи (`make build` ✅, `make test` ✅ — 23 теста).
+Задача фазы — довести его до работающей папки в Finder с подписью.
+
 ### Задачи
-1. 🧱 `Config/Local.xcconfig` (gitignored) с `DEVELOPMENT_TEAM = <TeamID>`, `GITHUB_OAUTH_CLIENT_ID = <id>`. Шаблон — `Config/Local.xcconfig.example`.
-2. 🧱 `make generate` → `xcodegen generate` по `project.yml`. Таргеты: `GitDocumentStorage` (app, LSUIElement), `GitDocumentStorageFileProvider` (appex), тесты пакета.
-3. 🧱 Entitlements (уже в `Config/`): sandbox, network client, app group `$(TeamIdentifierPrefix)group.<bundle>`, keychain group. У расширения — `com.apple.developer.fileprovider.testing-mode` только в Debug.
-4. 🧱 `Sources/App/GitDocumentStorageApp.swift`: `@main` SwiftUI App с `MenuBarExtra` (иконка), пункт «Settings…», «Quit». В `applicationDidFinishLaunching` — регистрация домена-заглушки `NSFileProviderDomain(identifier: "demo", displayName: "Demo")`.
-5. 🧱 `Sources/FileProviderExtension/FileProviderExtension.swift`: `NSFileProviderReplicatedExtension`, корень + один файл `README.txt` в памяти, `fetchContents` отдаёт текст. Используйте `Sources/FileProviderExtension/FileProviderItem.swift` (есть стаб).
-6. 🧱 `scripts/fp-logs.sh`, `scripts/fp-reset.sh`, `Makefile` (есть).
-7. 🧪 `swift test` в `Packages/GitDocsKit` проходит (есть smoke-тест).
+1. 🧱 `Config/Local.xcconfig` (gitignored) с `GDS_DEVELOPMENT_TEAM = <TeamID>`, `GITHUB_OAUTH_CLIENT_ID = <id>`. Шаблон — `Config/Local.xcconfig.example`.
+2. 🧱 `make run` → сборка с подписью, копия в `~/Applications`, запуск. Исправить всё, что всплывёт при подписи (App Groups с префиксом Team ID, provisioning).
+3. 🧱 Проверить, что entitlements (`Config/*.entitlements`) после подписи содержат группу `<TEAMID>.group.com.nasonov.gitdocumentstorage` (`codesign -d --entitlements - <app>`). При необходимости добавить расширению `com.apple.developer.fileprovider.testing-mode` только в Debug (отдельный entitlements-файл для Debug-конфига через `project.yml`).
+4. 🧱 Уже есть: `Sources/App/*` (MenuBarExtra, `DomainManager` с демо-доменом, heartbeat, disconnect на выходе), `Sources/FileProviderExtension/*` (`FileProviderExtension`, `FileProviderItem`, `DemoCatalog`, `DemoEnumerator` с `README.txt` в памяти). Проверить в Finder; исправить ошибки API, если система отвергнет элементы (смотреть `make logs`).
+5. 🧱 Проверить `scripts/fp-reset.sh`: флаг `--reset-domains` приложения удаляет домены.
+6. 🧪 `make test` проходит.
 
 ### ⚠️ Грабли
 - Без `DEVELOPMENT_TEAM` App Groups не валидируются и расширение не запустится (`pluginkit -m -p com.apple.fileprovider-nonui -vv` должно показать наш bundle id).
