@@ -37,7 +37,8 @@ public enum CommitStrategySelector {
             case .addition(_, _, _, let size):
                 fileCount += 1
                 totalBytes += size
-                if size > limits.graphQLMaxFileBytes { return .restGitData }
+                // Пустой blob GraphQL отклоняет (`createCommitOnBranch` = null) и валит весь коммит, включая файлы в новой папке.
+                if size == 0 || size > limits.graphQLMaxFileBytes { return .restGitData }
             case .deletion:
                 fileCount += 1
             case .move, .copy:
@@ -48,5 +49,43 @@ public enum CommitStrategySelector {
             return .restGitData
         }
         return .graphQL
+    }
+}
+
+/// Режет пачку, чтобы один запрос к GitHub не собирал всю папку сразу.
+public enum CommitChunks {
+    public static let maxFiles = 40
+    public static let maxBytes: Int64 = 8 * 1024 * 1024
+
+    public static func split(_ changes: [CommitChange], maxFiles: Int = CommitChunks.maxFiles, maxBytes: Int64 = CommitChunks.maxBytes) -> [[CommitChange]] {
+        var chunks: [[CommitChange]] = []
+        var current: [CommitChange] = []
+        var bytes: Int64 = 0
+        func flush() {
+            if current.isEmpty { return }
+            chunks.append(current)
+            current = []
+            bytes = 0
+        }
+        for change in changes {
+            let size = Self.bytes(of: change)
+            if size > maxBytes {
+                flush()
+                chunks.append([change])
+                continue
+            }
+            if !current.isEmpty, current.count >= maxFiles || bytes + size > maxBytes {
+                flush()
+            }
+            current.append(change)
+            bytes += size
+        }
+        flush()
+        return chunks
+    }
+
+    private static func bytes(of change: CommitChange) -> Int64 {
+        if case .addition(_, _, _, let size) = change { return size }
+        return 0
     }
 }

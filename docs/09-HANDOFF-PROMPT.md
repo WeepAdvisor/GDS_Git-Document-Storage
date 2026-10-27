@@ -17,6 +17,19 @@
 7. Каждая задача = коммит с префиксом `P<фаза>:`.
 8. Если наблюдаешь поведение системы, не совпадающее с документацией проекта, запиши его в `docs/08-OPEN-QUESTIONS.md` → «Наблюдения».
 9. В конце каждой фазы: пройди ручные сценарии `docs/07-TESTING.md` для этой фазы, отчитайся чек-листом «✅/❌ + как воспроизвести».
-10. Для запуска нужен `Config/Local.xcconfig` (см. `Config/Local.xcconfig.example`). Если его нет — попроси пользователя указать `DEVELOPMENT_TEAM` и `GITHUB_OAUTH_CLIENT_ID`.
+10. Для запуска нужен `Config/Local.xcconfig` (см. `Config/Local.xcconfig.example`). Если его нет — попроси пользователя указать `GDS_DEVELOPMENT_TEAM` и `GITHUB_OAUTH_CLIENT_ID`. Не выдумывай Team ID и Client ID.
 
-Начни с фазы 0: прочитай план, выполни `make generate && make build && make test`, устрани проблемы, добейся появления папки «Demo» в Finder.
+Зафиксировано владельцем (не переспрашивать, см. `docs/08` Q5/Q6):
+
+- Auth: оба пути в UI. «Sign in with GitHub» (Device Flow) и «Use a token instead» (PAT). Протокол — фаза 1, экраны — фаза 6. В фазе 3 допустим временный ввод PAT, чтобы проверить чтение без UI.
+- Масштаб: документы/картинки, ≤ 5 000 файлов, файл ≤ 50 MB, ≤ 10 человек. Только GitHub API. libgit2 / локальный `.git` не добавлять.
+- Конфликты по умолчанию: `lastWriterWins` (ADR-006). Недоступность без приложения: мягкий `disconnect` (ADR-005).
+
+Начни с фазы 0 и не уходи дальше, пока папка «Demo» не видна в Finder:
+
+1. Прочитай `docs/00-PLAN.md` (фаза 0), `.cursor/rules/fileprovider.mdc`.
+2. `make generate && make build && make test` — должны быть зелёными (каркас уже собирается).
+3. Если нет `Config/Local.xcconfig` — остановись и попроси Team ID и OAuth Client ID.
+4. `make run` (сборка с подписью → `~/Applications` → запуск).
+5. Приёмка: Finder → Locations → GitDocumentStorage → «Demo» → `README.txt` открывается. Логи: `make logs`. Зависший домен: `make reset`.
+6. Отчитайся чек-листом T0 из `docs/07-TESTING.md`. Жди подтверждения перед фазой 1.

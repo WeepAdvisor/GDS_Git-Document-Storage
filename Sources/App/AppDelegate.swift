@@ -16,17 +16,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         startHeartbeat()
-        Task {
-            await DomainManager.shared.registerDemoDomainIfNeeded()
-            await DomainManager.shared.reconnectAll()
-        }
+        CrashReporter.shared.start(process: "app")
+        LaunchAtLogin.registerIfRequested()
+        AppModel.shared.start()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowWillClose(_:)),
+            name: NSWindow.willCloseNotification,
+            object: nil
+        )
         logger.info("Launched")
+    }
+
+    @objc private func windowWillClose(_ notification: Notification) {
+        DispatchQueue.main.async {
+            let visible = NSApp.windows.contains { $0.isVisible }
+            if !visible {
+                NSApp.setActivationPolicy(.accessory)
+            }
+        }
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         // Фаза 6: дождаться опустошения очереди выгрузки (окно «Finishing upload…», таймаут 30 с).
         Task {
-            await DomainManager.shared.disconnectAll(reason: "GitDocumentStorage is not running")
+        CrashLog.clearMark(process: "app")
+            await DomainManager.shared.disconnectAll(reason: "GDS is not running")
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater

@@ -24,18 +24,38 @@ public actor GitHubClient {
         public let etag: String?
         public let rateLimit: RateLimitState
         public let notModified: Bool
+        /// Имена заголовков в нижнем регистре.
+        public let headers: [String: String]
+
+        public init(status: Int, body: Body, etag: String?, rateLimit: RateLimitState, notModified: Bool, headers: [String: String] = [:]) {
+            self.status = status
+            self.body = body
+            self.etag = etag
+            self.rateLimit = rateLimit
+            self.notModified = notModified
+            self.headers = headers
+        }
     }
 
     public let configuration: Configuration
-    private let session: URLSession
-    private let tokenProvider: @Sendable () async throws -> String
+    let session: URLSession
+    let tokenProvider: @Sendable () async throws -> String
+    let rateLimiter: RateLimiter
+    let etagCache: (any ETagCache)?
+    let transfer: TransferReporter?
 
     /// - Parameter tokenProvider: отдаёт актуальный токен аккаунта (из `TokenStore`).
     public init(configuration: Configuration = .init(),
                 session: URLSession = .shared,
+                rateLimiter: RateLimiter = RateLimiter(),
+                etagCache: (any ETagCache)? = nil,
+                transfer: TransferReporter? = nil,
                 tokenProvider: @escaping @Sendable () async throws -> String) {
         self.configuration = configuration
         self.session = session
+        self.rateLimiter = rateLimiter
+        self.etagCache = etagCache
+        self.transfer = transfer
         self.tokenProvider = tokenProvider
     }
 
@@ -63,7 +83,8 @@ public actor GitHubClient {
         let request = try await makeRequest(endpoint, ifNoneMatch: ifNoneMatch)
         let (data, urlResponse): (Data, URLResponse)
         do {
-            (data, urlResponse) = try await session.data(for: request)
+            let observer = transfer.map { TransferTaskDelegate(reporter: $0) }
+            (data, urlResponse) = try await session.data(for: request, delegate: observer)
         } catch let error as URLError where error.code == .cancelled {
             throw GitHubError.cancelled
         } catch {
@@ -71,11 +92,12 @@ public actor GitHubClient {
         }
         guard let http = urlResponse as? HTTPURLResponse else { throw GitHubError.network("Non-HTTP response") }
         let rate = RateLimitState(response: http)
+        let headers = Self.lowercasedHeaders(http)
         if http.statusCode == 304 {
-            return Response(status: 304, body: Data(), etag: http.value(forHTTPHeaderField: "ETag"), rateLimit: rate, notModified: true)
+            return Response(status: 304, body: Data(), etag: http.value(forHTTPHeaderField: "ETag"), rateLimit: rate, notModified: true, headers: headers)
         }
         if (200..<300).contains(http.statusCode) {
-            return Response(status: http.statusCode, body: data, etag: http.value(forHTTPHeaderField: "ETag"), rateLimit: rate, notModified: false)
+            return Response(status: http.statusCode, body: data, etag: http.value(forHTTPHeaderField: "ETag"), rateLimit: rate, notModified: false, headers: headers)
         }
         throw Self.mapError(status: http.statusCode, data: data, response: http, rate: rate)
     }
@@ -107,6 +129,25 @@ public actor GitHubClient {
             return .validation(message: message)
         default:
             return .http(status: status, message: message, documentationURL: body?.documentation_url)
+        }
+    }
+
+    static func lowercasedHeaders(_ response: HTTPURLResponse) -> [String: String] {
+        var result: [String: String] = [:]
+        for (key, value) in response.allHeaderFields {
+            guard let name = key as? String, let text = value as? String else { continue }
+            result[name.lowercased()] = text
+        }
+        return result
+    }
+
+    static func lane(for category: Endpoint.Category) -> RateLimiter.Lane {
+        switch category {
+        case .read: return .read
+        case .blobDownload: return .blobDownload
+        case .blobUpload: return .blobUpload
+        case .mutation: return .mutation
+        case .graphQL: return .graphQL
         }
     }
 }

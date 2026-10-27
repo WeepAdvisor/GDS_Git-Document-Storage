@@ -23,7 +23,8 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: $(GDS_DEVELOPMENT_TEAM)
-    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    "CODE_SIGN_IDENTITY[sdk=macosx*]": "Apple Development"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
     DEAD_CODE_STRIPPING: YES
 
 packages:
@@ -41,13 +42,15 @@ targets:
         embed: true
       - package: GitDocsKit
         product: SyncCore
+      - package: GitDocsKit
+        product: GitHubKit
       - sdk: FileProvider.framework
       - sdk: ServiceManagement.framework
     info:
       path: Sources/App/Info.plist
       properties:
-        CFBundleDisplayName: GitDocumentStorage
-        CFBundleName: GitDocumentStorage
+        CFBundleDisplayName: GDS
+        CFBundleName: GDS
         LSUIElement: true
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         NSHumanReadableCopyright: "© 2026"
@@ -59,7 +62,7 @@ targets:
       path: Config/App.entitlements
     settings:
       base:
-        PRODUCT_NAME: GitDocumentStorage
+        PRODUCT_NAME: GDS
         PRODUCT_BUNDLE_IDENTIFIER: $(GDS_BUNDLE_ID)
         ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_ENTITLEMENTS: Config/App.entitlements
@@ -73,11 +76,16 @@ targets:
     dependencies:
       - package: GitDocsKit
         product: SyncCore
+      - package: GitDocsKit
+        product: GitHubKit
+      - package: GitDocsKit
+        product: Persistence
       - sdk: FileProvider.framework
     info:
       path: Sources/FileProviderExtension/Info.plist
       properties:
-        CFBundleDisplayName: GitDocumentStorage
+        CFBundleDisplayName: GDS
+        CFBundleName: GDS
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         GDSAppGroupID: $(GDS_APP_GROUP_ID)
         GDSKeychainAccessGroup: $(GDS_KEYCHAIN_GROUP)
@@ -86,6 +94,10 @@ targets:
           NSExtensionPointIdentifier: com.apple.fileprovider-nonui
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).FileProviderExtension
           NSExtensionFileProviderSupportsEnumeration: true
+          NSExtensionFileProviderActions:
+            - NSExtensionFileProviderActionIdentifier: com.nasonov.gitdocumentstorage.syncNow
+              NSExtensionFileProviderActionName: Sync Now
+              NSExtensionFileProviderActionActivationRule: TRUEPREDICATE
     entitlements:
       path: Config/FileProvider.entitlements
     settings:

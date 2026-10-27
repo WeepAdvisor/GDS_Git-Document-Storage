@@ -50,4 +50,28 @@ public enum SharedDefaultsKey {
     public static let lastActivityAt = "lastActivityAt"
     public static func knownRemoteHead(_ domainID: UUID) -> String { "knownRemoteHead.\(domainID.uuidString)" }
     public static let strictUnavailabilityMode = "strictUnavailabilityMode"
+    public static func syncRequest(_ domainID: UUID) -> String { "syncRequest.\(domainID.uuidString)" }
+    public static func syncRequestSeen(_ domainID: UUID) -> String { "syncRequestSeen.\(domainID.uuidString)" }
+
+    /// Приложение просит расширение немедленно вытянуть GitHub и выгрузить очередь.
+    public static func postSyncRequest(_ domainID: UUID, defaults: UserDefaults?) {
+        defaults?.set(Date().timeIntervalSince1970, forKey: syncRequest(domainID))
+        defaults?.synchronize()
+    }
+
+    /// `true` ровно один раз на каждый `postSyncRequest`.
+    public static func consumeSyncRequest(_ domainID: UUID, defaults: UserDefaults?) -> Bool {
+        let stamp = defaults?.double(forKey: syncRequest(domainID)) ?? 0
+        guard stamp > 0 else { return false }
+        let seen = defaults?.double(forKey: syncRequestSeen(domainID)) ?? 0
+        guard stamp > seen else { return false }
+        defaults?.set(stamp, forKey: syncRequestSeen(domainID))
+        defaults?.synchronize()
+        return true
+    }
+}
+
+/// Идентификатор пункта «Sync Now» в контекстном меню Finder.
+public enum SyncCommand {
+    public static let actionIdentifier = "com.nasonov.gitdocumentstorage.syncNow"
 }

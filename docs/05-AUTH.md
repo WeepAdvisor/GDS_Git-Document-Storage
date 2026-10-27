@@ -14,7 +14,7 @@
    - Homepage URL: любой (репозиторий проекта)
    - Authorization callback URL: `http://127.0.0.1/unused` (Device Flow его не использует, но поле обязательное)
    - ✅ **Enable Device Flow**
-2. Скопировать **Client ID** → `Config/Secrets.xcconfig` как `GITHUB_OAUTH_CLIENT_ID` (это публичное значение, секрет НЕ нужен и в приложении не хранится).
+2. Скопировать **Client ID** → `Config/Local.xcconfig` как `GITHUB_OAUTH_CLIENT_ID` (это публичное значение, секрет НЕ нужен и в приложении не хранится). Шаблон — `Config/Local.xcconfig.example`.
 
 ### Поток в приложении (`DeviceFlowAuthenticator`)
 ```
@@ -34,7 +34,9 @@
 Scope `repo` — единственный classic-scope, дающий запись в приватные репозитории. В UI честно пишем:
 «GitDocumentStorage will be able to read and write repositories you have access to. You can revoke this anytime at github.com/settings/applications».
 
-### Fallback: «Use a token instead»
+### «Use a token instead»
+
+Оба входа видны в Accounts с фазы 6 (решение владельца, `docs/08` Q5). PAT не откладывается на потом.
 Поле для вставки PAT. Поддерживаем classic (`repo`) и fine-grained (Repository permissions → Contents: Read and write, Metadata: Read). После вставки — `GET /user` для идентификации аккаунта; для fine-grained токенов проверка возможностей делается по факту (`permissions` в `GET /repos`).
 
 ## 3. Хранение

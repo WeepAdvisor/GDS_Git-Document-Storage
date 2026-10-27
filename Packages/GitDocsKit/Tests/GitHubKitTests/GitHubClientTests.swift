@@ -60,4 +60,25 @@ final class GitHubClientTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "If-None-Match"), "\"etag\"")
         XCTAssertEqual(endpoint.cacheKey, "GET /repos/o/r/git/ref/heads/main")
     }
+
+    func testGraphQLNullDataKeepsServerMessage() {
+        let body = Data(#"{"data":{"createCommitOnBranch":null},"errors":[{"message":"contents is empty"}]}"#.utf8)
+        guard case let .graphQL(messages) = GitHubClient.graphQLFailure(in: body) else {
+            return XCTFail("expected the server message")
+        }
+        XCTAssertEqual(messages, ["contents is empty"])
+    }
+
+    func testStreamedBase64JSONMatchesTheFile() throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "gds-b64-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = directory.appending(path: "in.bin")
+        let payload = Data([0, 1, 2, 3, 4, 255, 10])
+        try payload.write(to: source)
+        let body = directory.appending(path: "out.json")
+        try JSONBase64Body.write(source: source, prefix: "{\"content\":\"", suffix: "\",\"encoding\":\"base64\"}", to: body)
+        let object = try JSONSerialization.jsonObject(with: Data(contentsOf: body)) as? [String: String]
+        XCTAssertEqual(Data(base64Encoded: object?["content"] ?? ""), payload)
+    }
 }

@@ -2,7 +2,7 @@
 # Удаляет все домены провайдера (через скрытый флаг приложения) и перезапускает Finder-кэш провайдеров.
 # Использовать, когда Finder «завис» на старом состоянии расширения.
 set -euo pipefail
-APP="${1:-$HOME/Applications/GitDocumentStorage.app}"
+APP="${1:-$HOME/Applications/GDS.app}"
 
 echo "→ pluginkit sees:"
 pluginkit -m -p com.apple.fileprovider-nonui -vv 2>/dev/null | grep -i gitdocument || echo "  (extension not registered yet)"

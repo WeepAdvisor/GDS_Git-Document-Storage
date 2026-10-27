@@ -1,4 +1,5 @@
 APP        := GitDocumentStorage
+PRODUCT    := GDS
 PROJECT    := $(APP).xcodeproj
 SCHEME     := $(APP)
 PKG_DIR    := Packages/GitDocsKit
@@ -21,9 +22,9 @@ run: generate
 	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Debug \
 		-derivedDataPath $(DERIVED) build -quiet
 	mkdir -p ~/Applications
-	rm -rf ~/Applications/$(APP).app
-	cp -R $(DERIVED)/Build/Products/Debug/$(APP).app ~/Applications/
-	open ~/Applications/$(APP).app
+	rm -rf ~/Applications/$(PRODUCT).app
+	cp -R $(DERIVED)/Build/Products/Debug/$(PRODUCT).app ~/Applications/
+	open ~/Applications/$(PRODUCT).app
 
 test: test-package
 

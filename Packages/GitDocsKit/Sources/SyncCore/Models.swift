@@ -249,10 +249,13 @@ public struct CommitResult: Sendable, Equatable {
     public var newHead: RemoteHead
     /// path → blob SHA для всех additions/copies/moves (чтобы обновить `items.blob_sha`).
     public var blobSHAs: [String: String]
+    /// Файлы, которые GitHub не принял. Остальной коммит при этом проходит.
+    public var rejected: [String: String]
 
-    public init(newHead: RemoteHead, blobSHAs: [String: String]) {
+    public init(newHead: RemoteHead, blobSHAs: [String: String], rejected: [String: String] = [:]) {
         self.newHead = newHead
         self.blobSHAs = blobSHAs
+        self.rejected = rejected
     }
 }
 
@@ -262,6 +265,8 @@ public struct CommitLimits: Sendable, Equatable {
     public var graphQLMaxFileBytes: Int64 = 10 * 1024 * 1024
     public var graphQLMaxTotalBytes: Int64 = 25 * 1024 * 1024
     public var gitHubMaxBlobBytes: Int64 = 100 * 1024 * 1024
+    /// Выше этого файл не читается в память: base64 раздувает его, и система убивает расширение.
+    public var maxInMemoryBytes: Int64 = 32 * 1024 * 1024
     public init() {}
     public static let `default` = CommitLimits()
 }

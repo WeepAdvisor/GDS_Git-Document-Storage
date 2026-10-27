@@ -37,6 +37,8 @@ apply(diff) в одной транзакции:
 headSHA = newHead; revision++
 ```
 
+`compare` не отдаёт размер файла. Для `added` / `modified` / `changed` с пустым `size` он берётся из `git/trees` того же HEAD. Если записать 0, File Provider материализует файл как уже скачанный пустой и больше не вызывает `fetchContents`. Уже испорченные строки (size = 0, blob SHA не пустой blob) один раз переотправляются в working set с `documentSize = nil` и `contentVersion` + `#pending`, пока скачивание не запишет фактический размер.
+
 После применения — `signalEnumerator(.workingSet)`, чтобы Finder вызвал `enumerateChanges`.
 
 ### Дата коммита для mtime

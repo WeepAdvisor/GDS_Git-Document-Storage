@@ -27,6 +27,10 @@ final class CommitStrategySelectorTests: XCTestCase {
         XCTAssertEqual(CommitStrategySelector.select(for: changes, isEmptyRepository: false), .restGitData)
     }
 
+    func testEmptyFileForcesREST() {
+        XCTAssertEqual(CommitStrategySelector.select(for: [addition("folder/.gitkeep", size: 0)], isEmptyRepository: false), .restGitData)
+    }
+
     func testLargeFileForcesREST() {
         let limits = CommitLimits.default
         let changes = [addition("big.bin", size: limits.graphQLMaxFileBytes + 1)]
@@ -47,5 +51,17 @@ final class CommitStrategySelectorTests: XCTestCase {
         XCTAssertLessThan(rest, limits.graphQLMaxFileBytes)
         XCTAssertEqual(CommitStrategySelector.select(for: [addition("a", size: part), addition("b", size: part), addition("c", size: rest)], isEmptyRepository: false, limits: limits), .graphQL)
         XCTAssertEqual(CommitStrategySelector.select(for: [addition("a", size: part), addition("b", size: part), addition("c", size: rest + 1)], isEmptyRepository: false, limits: limits), .restGitData)
+    }
+
+    func testHugeFolderIsSplitIntoSmallCommits() {
+        let small = (0..<45).map { addition("img\($0).png", size: 200_000) }
+        let video = addition("clip.mov", size: 20 * 1024 * 1024)
+        let chunks = CommitChunks.split(small + [video])
+        XCTAssertGreaterThan(chunks.count, 1)
+        XCTAssertTrue(chunks.contains { $0.count == 1 && $0.allSatisfy { change in
+            if case .addition(let path, _, _, _) = change { return path == "clip.mov" }
+            return false
+        } })
+        XCTAssertTrue(chunks.allSatisfy { $0.count <= CommitChunks.maxFiles })
     }
 }
