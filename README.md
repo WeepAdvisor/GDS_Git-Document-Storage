@@ -1,42 +1,42 @@
 # GitDocumentStorage
 
-Общая папка с документами, которая на самом деле является GitHub-репозиторием.
+A shared documents folder that is actually a GitHub repository.
 
-Сохранил файл в Finder — через несколько секунд он лежит на GitHub, и его видят все, у кого подключена та же папка. Несколько папок, несколько аккаунтов GitHub. Папка есть, пока приложение запущено.
+Save a file in Finder and, within a few seconds, it is on GitHub for everyone who connected the same folder. Several folders, several GitHub accounts. The folder is there while the app is running.
 
-## Зачем
+## Why
 
-Общие документы обычно живут либо в мессенджере (файлы теряются, версии путаются), либо в git (ветки, коммиты, pull request — лишние для договора, сметы, заметки). Нужна обычная папка, которую открывают Word, Preview и Finder, а под ней — нормальное хранилище: история, права доступа, бэкап на GitHub.
+Shared documents usually end up in a chat, where files get lost and versions get mixed up, or in git, where branches, commits, and pull requests are overhead for a contract, a spreadsheet, or a note. What you want is an ordinary folder that Word, Preview, and Finder can open, with real storage underneath: history, access control, and a backup on GitHub.
 
-GitDocumentStorage — это слой между ними. Для человека это сетевая папка. Для GitHub это обычный репозиторий: каждый сейв становится коммитом, старая версия остаётся в истории, доступ раздаётся как к любому репо. Участнику не нужно ставить git, клонировать репозиторий и помнить, что надо закоммитить.
+GitDocumentStorage is that layer. For a person it is a network folder. For GitHub it is an ordinary repository: each save becomes a commit, the previous version stays in history, and access is granted the same way as for any other repo. A participant does not install git, clone the repository, or remember to commit.
 
-Локального `.git` нет. Приложение говорит с GitHub только по HTTPS API. Закрыл приложение — папка в Finder пропадает, на GitHub ничего не меняется.
+There is no local `.git`. The app talks to GitHub over the HTTPS API only. Quit the app and the Finder folder goes away. Nothing on GitHub changes.
 
-## Как этим пользуются
+## How you use it
 
-1. Войти в GitHub (Device Flow или personal access token).
-2. Подключить репозиторий — в Finder появляется папка.
-3. Создавать и править файлы любыми программами. Сохранение само уходит на GitHub.
-4. Чужие правки приезжают в ту же папку.
+1. Sign in to GitHub (Device Flow or a personal access token).
+2. Connect a repository. A folder appears in Finder.
+3. Create and edit files with any app. Saving uploads them to GitHub.
+4. Other people's edits arrive in the same folder.
 
-Папка физически лежит в `~/Library/CloudStorage/GitDocumentStorage-<имя>/`. Содержимое скачивается при открытии файла.
+The folder lives at `~/Library/CloudStorage/GitDocumentStorage-<name>/`. File contents download when you open the file.
 
-## Что внутри
+## What is inside
 
-Нативное приложение для macOS 15+ (Swift 6, SwiftUI + AppKit). Finder-папку даёт File Provider (`NSFileProviderReplicatedExtension`), тот же механизм, что у Dropbox и iCloud. Запись в репозиторий — fast-forward коммит через GitHub API (`createCommitOnBranch` / Git Data API), без force-push.
+A native macOS 15+ app (Swift 6, SwiftUI + AppKit). The Finder folder is a File Provider (`NSFileProviderReplicatedExtension`), the same mechanism Dropbox and iCloud use. Writes are fast-forward commits through the GitHub API (`createCommitOnBranch` / Git Data API). No force-push.
 
-Подробности: [план](docs/00-PLAN.md), [архитектура](docs/01-ARCHITECTURE.md), [решения](docs/06-DECISIONS.md).
+Details: [plan](docs/00-PLAN.md), [architecture](docs/01-ARCHITECTURE.md), [decisions](docs/06-DECISIONS.md).
 
-## Быстрый старт
+## Quick start
 
 ```sh
-cp Config/Local.xcconfig.example Config/Local.xcconfig   # Team ID и OAuth Client ID — только локально
-make test      # swift test в Packages/GitDocsKit
-make build     # компиляция без подписи
-make run       # сборка с подписью → ~/Applications → запуск
-make logs      # логи расширения и fileproviderd
+cp Config/Local.xcconfig.example Config/Local.xcconfig   # Team ID and OAuth Client ID stay local
+make test      # swift test in Packages/GitDocsKit
+make build     # compile without signing
+make run       # signed build → ~/Applications → launch
+make logs      # extension and fileproviderd logs
 ```
 
-`Config/Local.xcconfig` в git не входит. Туда же не кладутся токены: они живут в Keychain.
+`Config/Local.xcconfig` is not in git. Tokens are not either: they live in the Keychain.
 
-Нужны macOS 15+, Xcode 26+, [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
+Requires macOS 15+, Xcode 26+, and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
